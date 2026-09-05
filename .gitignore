@@ -1,0 +1,11 @@
+# Never commit real secrets — this is the actual file with your live keys
+.env
+.env.local
+
+# Installed dependencies — regenerated from package.json via `npm install`
+node_modules/
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+*.log

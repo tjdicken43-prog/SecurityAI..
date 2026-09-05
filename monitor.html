@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/svg+xml" href="logo.svg">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Live Monitor — SecurityAI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#14171A; --panel:#1C2124; --panel-2:#22282C; --line:#31383D;
+    --text:#EDEFF1; --muted:#8B939B; --green:#3FCF8E; --red:#FF5A5A; --amber:#FFB020;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-serif;line-height:1.55;}
+  h1,h2,h3{font-family:'Oswald',sans-serif;font-weight:600;margin:0;}
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  a{color:inherit;}
+  .wrap{max-width:1040px;margin:0 auto;padding:0 28px;}
+
+  nav{border-bottom:1px solid var(--line);}
+  nav .wrap{display:flex;align-items:center;justify-content:space-between;height:64px;}
+  .brand{display:flex;align-items:center;gap:10px;font-family:'Oswald';font-size:19px;font-weight:600;text-decoration:none;}
+  
+  .back{color:var(--muted);font-size:14px;text-decoration:none;}
+  .back:hover{color:var(--text);}
+
+  main{padding:44px 0 90px;}
+  .head{margin-bottom:8px;}
+  .head .tag{color:var(--green);font-size:13px;font-family:'IBM Plex Mono';margin-bottom:10px;}
+  .head h1{font-size:28px;}
+  .head p{color:var(--muted);font-size:14.5px;margin-top:10px;max-width:600px;}
+
+  .disclosure{
+    background:var(--panel-2);border:1px solid var(--line);border-radius:6px;
+    padding:16px 18px;display:flex;gap:12px;margin:24px 0;
+  }
+  .disclosure .mark{font-family:'IBM Plex Mono';color:var(--amber);font-size:12px;flex-shrink:0;margin-top:2px;}
+  .disclosure p{margin:0;font-size:13.5px;color:var(--muted);}
+
+  .statusbar{
+    display:flex;align-items:center;gap:12px;background:var(--panel);
+    border:1px solid var(--line);border-radius:6px;padding:16px 20px;margin-bottom:24px;
+  }
+  .status-dot{width:10px;height:10px;border-radius:50%;background:var(--muted);flex-shrink:0;}
+  .status-dot.running{background:var(--green);animation:pulse 1.6s infinite;}
+  .status-line{display:flex;align-items:center;gap:8px;font-family:'IBM Plex Mono';font-size:13px;color:var(--muted);}
+  .notice-inline{
+    background:var(--panel-2);border:1px solid var(--line);border-radius:6px;
+    padding:14px 16px;font-size:13px;color:var(--muted);line-height:1.6;
+  }
+  .notice-inline strong{color:var(--text);}
+  @keyframes pulse{50%{opacity:0.4;}}
+  .statusbar .main{font-family:'IBM Plex Mono';font-size:13.5px;}
+  .statusbar .sub{color:var(--muted);font-size:12.5px;margin-left:auto;text-align:right;}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:26px;margin-bottom:20px;}
+  .card h3{font-size:14px;color:var(--muted);font-weight:500;margin-bottom:16px;letter-spacing:0.2px;}
+  label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:6px;}
+  input[type=text], input[type=email], input[type=tel]{
+    width:100%;background:#0F1214;border:1px solid var(--line);border-radius:4px;
+    color:var(--text);font-size:14px;padding:10px 12px;font-family:'IBM Plex Sans';margin-bottom:16px;
+  }
+  input:focus{outline:none;border-color:var(--green);}
+  input:disabled{opacity:0.5;}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+  @media(max-width:640px){.row2,.row3{grid-template-columns:1fr;}}
+
+  .consent{display:flex;gap:12px;align-items:flex-start;margin:6px 0 18px;}
+  .consent input{margin-top:3px;width:16px;height:16px;flex-shrink:0;accent-color:var(--green);cursor:pointer;}
+  .consent p{margin:0;font-size:13px;color:var(--muted);}
+
+  .btn-primary{
+    background:var(--green);color:#0C1512;font-weight:600;font-size:14.5px;
+    padding:13px 22px;border-radius:4px;border:none;cursor:pointer;
+  }
+  .btn-primary:disabled{background:#31383D;color:#6b7278;cursor:not-allowed;}
+  .btn-danger{
+    background:transparent;color:var(--red);font-weight:600;font-size:14.5px;
+    padding:13px 22px;border-radius:4px;border:1px solid var(--red);cursor:pointer;
+  }
+  .fineprint{font-size:12px;color:#6b7278;margin-top:4px;}
+
+  .log-list{display:flex;flex-direction:column;max-height:420px;overflow-y:auto;}
+  .log-item{display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--line);font-size:13.5px;}
+  .log-item:last-child{border-bottom:none;}
+  .log-item .t{color:var(--muted);font-family:'IBM Plex Mono';font-size:12px;}
+  .badge{font-size:11px;padding:2px 8px;border-radius:20px;font-weight:600;height:fit-content;flex-shrink:0;}
+  .badge.ok{background:rgba(63,207,142,0.14);color:var(--green);}
+  .badge.bad{background:rgba(255,90,90,0.14);color:var(--red);}
+  .badge.warn{background:rgba(255,176,32,0.14);color:var(--amber);}
+  .log-empty{color:var(--muted);font-size:13.5px;padding:8px 0;}
+
+  .sourcetoggle{display:flex;gap:20px;margin-bottom:18px;}
+  .sourcetab{display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--muted);cursor:pointer;}
+  .sourcetab input{accent-color:var(--green);cursor:pointer;}
+  .btn-ghost-sm{
+    background:transparent;color:var(--text);font-weight:500;font-size:13px;
+    padding:8px 14px;border-radius:4px;border:1px solid var(--line);cursor:pointer;
+  }
+  .btn-ghost-sm:hover{border-color:#4a545b;}
+  .device-output{
+    background:#0F1214;border:1px solid var(--line);border-radius:4px;
+    color:var(--green);font-family:'IBM Plex Mono';font-size:12px;padding:14px;
+    white-space:pre-wrap;word-break:break-word;max-height:220px;overflow-y:auto;margin:0 0 16px;
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <a class="brand" href="securityai.html"><svg class="logo-mark" width="22" height="22" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="flex-shrink:0;">
+        <path d="M4 18V6a2 2 0 0 1 2-2h12" stroke="currentColor" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M44 18V6a2 2 0 0 0-2-2H30" stroke="currentColor" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M4 30v12a2 2 0 0 0 2 2h12" stroke="currentColor" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M44 30v12a2 2 0 0 1-2 2H30" stroke="currentColor" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"/>
+        <line x1="10" y1="24" x2="38" y2="24" stroke="#3FCF8E" stroke-width="2.4" stroke-opacity="0.4" stroke-linecap="round"/>
+        <circle cx="24" cy="24" r="5.5" fill="#3FCF8E"/>
+      </svg>SecurityAI</a>
+    <a class="back" href="securityai.html">← Back to site</a>
+  </div>
+</nav>
+
+<main>
+  <div class="wrap">
+    <div class="head">
+      <div class="tag mono">LIVE MONITOR</div>
+      <h1>Persistent monitoring control panel</h1>
+      <p>This runs inside the Node process started by <span class="mono">node server.js</span> — not in this browser tab. Once you press Start, it keeps capturing and analyzing on your interval even if you close this page, until you press Stop or the server process is shut down.</p>
+    </div>
+
+    <div class="disclosure">
+      <div class="mark">REQUIRES SETUP</div>
+      <p>This needs ffmpeg installed on the machine running the server, a real Anthropic API key in <span class="mono">.env</span>, and (optionally) SMTP and/or Twilio credentials for alerts to actually send. See README.md. Without those, Start will fail or run without notifications — the dashboard below tells you which.</p>
+    </div>
+
+    <div class="statusbar">
+      <span class="status-dot" id="statusDot"></span>
+      <span class="main" id="statusMain">Checking status...</span>
+      <span class="sub" id="statusSub"></span>
+    </div>
+
+    <div class="card" id="configCard">
+      <h3>CAMERA SOURCE</h3>
+      <div class="sourcetoggle">
+        <label class="sourcetab"><input type="radio" name="sourceType" value="url" checked onchange="onSourceTypeChange()"> IP camera / stream URL</label>
+        <label class="sourcetab"><input type="radio" name="sourceType" value="webcam" onchange="onSourceTypeChange()"> USB webcam on this computer</label>
+        <label class="sourcetab"><input type="radio" name="sourceType" value="browser-push" onchange="onSourceTypeChange()"> Share a screen or window</label>
+      </div>
+
+      <div id="urlSourceFields">
+        <label>Camera URL — an RTSP stream or an HTTP snapshot URL</label>
+        <input type="text" id="cameraUrl" placeholder="rtsp://192.168.1.50:554/stream1  or  http://192.168.1.50/snapshot.jpg">
+        <p class="fineprint" style="margin-top:-10px;margin-bottom:16px;">Works the same on Windows, macOS, or Linux — this is the recommended option for most gyms, since it's how most IP cameras and NVR software already expose a feed.</p>
+      </div>
+
+      <div id="webcamSourceFields" style="display:none;">
+        <label>Webcam device — the exact identifier this OS needs (format differs by platform)</label>
+        <input type="text" id="deviceId" placeholder="Press Detect to find this machine's exact value">
+        <div style="display:flex;gap:10px;align-items:center;margin:-6px 0 16px;">
+          <button type="button" class="btn-ghost-sm" onclick="detectDevices()">Detect connected cameras</button>
+          <span class="fineprint" id="platformNote" style="margin:0;"></span>
+        </div>
+        <pre id="deviceOutput" class="device-output" style="display:none;"></pre>
+        <p class="fineprint" style="margin-top:-8px;margin-bottom:16px;">A local webcam's device name is specific to this exact machine — there's no reliable way to guess it in advance, which is why Detect runs a real command here rather than offering a dropdown of guesses.</p>
+      </div>
+
+      <div id="screenSourceFields" style="display:none;">
+        <div class="notice-inline">
+          <strong>This one is different from the other two.</strong> IP cameras and webcams run fully headless — the server captures on its own, and this browser tab can close. Screen sharing can't work that way for anyone's implementation, not just this one: sharing your screen is a browser permission tied to an open tab, so <strong>this tab must stay open</strong> for as long as you want it monitoring. Closing it, or stopping the share from your browser's own controls, stops monitoring the same as pressing Stop here.
+        </div>
+        <div class="status-line" style="margin:16px 0;"><span class="status-dot" id="screenStatusDot"></span><span id="screenStatusText">Screen not shared yet</span></div>
+        <button type="button" class="btn-ghost-sm" id="screenShareBtn" onclick="toggleScreenCapture()">Share a screen or window</button>
+        <video id="screenVideo" autoplay playsinline muted style="display:none;"></video>
+        <canvas id="screenCanvas" style="display:none;"></canvas>
+      </div>
+
+      <div class="row2">
+        <div><label>Label for this camera (optional, used in alerts)</label><input type="text" id="cameraLabel" placeholder="Front entrance"></div>
+        <div><label>Expected check-ins at any moment</label><input type="text" id="expectedCount" value="1" inputmode="numeric"></div>
+      </div>
+      <div class="row2">
+        <div><label>Capture interval (seconds, minimum 5)</label><input type="text" id="intervalSeconds" value="10" inputmode="numeric"></div>
+        <div style="display:flex;align-items:flex-end;padding-bottom:11px;gap:10px;">
+          <input type="checkbox" id="accessibleGate" style="width:16px;height:16px;flex-shrink:0;accent-color:var(--green);cursor:pointer;">
+          <label for="accessibleGate" style="margin:0;cursor:pointer;">Has a marked accessible/disabled-access gate</label>
+        </div>
+      </div>
+
+      <h3 style="margin-top:22px;">SEND ALERTS TO</h3>
+      <div class="row2">
+        <div><label>Alert email (optional)</label><input type="email" id="alertEmail" placeholder="frontdesk@yourgym.com"></div>
+        <div><label>Alert phone, for SMS (optional)</label><input type="tel" id="alertPhone" placeholder="+15551234567"></div>
+      </div>
+      <p class="fineprint">Leave either blank to skip that channel. At least one is recommended — otherwise flags only show up in this log.</p>
+
+      <div class="consent">
+        <input type="checkbox" id="monitorConsent">
+        <p>I agree to let this server continuously capture frames from the camera above and send them to Claude for analysis, and to send alerts to the contacts above, for as long as monitoring is running. I can stop this at any time from this page.</p>
+      </div>
+
+      <div style="display:flex;gap:12px;">
+        <button class="btn-primary" id="startBtn" onclick="startMonitoring()" disabled>Start monitoring</button>
+        <button class="btn-danger" id="stopBtn" onclick="stopMonitoring()" style="display:none;">Stop monitoring</button>
+      </div>
+      <div class="fineprint" id="startError" style="color:var(--red);margin-top:10px;display:none;"></div>
+    </div>
+
+    <div class="card">
+      <h3>ALERT LOG <span style="color:#6b7278;">(refreshes every 4s while open — the server keeps logging even when this page is closed)</span></h3>
+      <div class="log-list" id="logList">
+        <div class="log-empty">Nothing captured yet.</div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+const consentBox = document.getElementById('monitorConsent');
+const startBtn = document.getElementById('startBtn');
+const stopBtn = document.getElementById('stopBtn');
+const startError = document.getElementById('startError');
+
+consentBox.addEventListener('change', () => { startBtn.disabled = !consentBox.checked; });
+
+function setFieldsDisabled(disabled){
+  ['cameraUrl','deviceId','cameraLabel','expectedCount','intervalSeconds','accessibleGate','alertEmail','alertPhone','monitorConsent']
+    .forEach(id => document.getElementById(id).disabled = disabled);
+  document.querySelectorAll('input[name="sourceType"]').forEach(r => r.disabled = disabled);
+}
+
+function getSourceType(){
+  return document.querySelector('input[name="sourceType"]:checked').value;
+}
+
+function onSourceTypeChange(){
+  const type = getSourceType();
+  document.getElementById('urlSourceFields').style.display = type === 'url' ? 'block' : 'none';
+  document.getElementById('webcamSourceFields').style.display = type === 'webcam' ? 'block' : 'none';
+  document.getElementById('screenSourceFields').style.display = type === 'browser-push' ? 'block' : 'none';
+}
+
+async function loadPlatformNote(){
+  try{
+    const res = await fetch('/monitor/platform');
+    const data = await res.json();
+    const names = { darwin: 'macOS', win32: 'Windows', linux: 'Linux' };
+    document.getElementById('platformNote').textContent = `Server is running on ${names[data.platform] || data.platform}.`;
+  } catch(err){
+    document.getElementById('platformNote').textContent = '';
+  }
+}
+
+async function detectDevices(){
+  const out = document.getElementById('deviceOutput');
+  out.style.display = 'block';
+  out.textContent = 'Running device detection...';
+  try{
+    const res = await fetch('/monitor/devices');
+    const data = await res.json();
+    out.textContent = data.output || 'No output returned.';
+  } catch(err){
+    out.textContent = 'Could not reach the server: ' + err.message;
+  }
+}
+
+let screenStream = null;
+let pushInterval = null;
+
+async function toggleScreenCapture(){
+  const video = document.getElementById('screenVideo');
+  const dot = document.getElementById('screenStatusDot');
+  const text = document.getElementById('screenStatusText');
+  const btn = document.getElementById('screenShareBtn');
+
+  if(screenStream){
+    screenStream.getTracks().forEach(t => t.stop());
+    screenStream = null;
+    video.style.display = 'none';
+    video.srcObject = null;
+    dot.className = 'status-dot';
+    text.textContent = 'Screen not shared yet';
+    btn.textContent = 'Share a screen or window';
+    return;
+  }
+
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia){
+    text.textContent = 'Screen share needs this page loaded over https:// or http://localhost.';
+    return;
+  }
+
+  try{
+    screenStream = await navigator.mediaDevices.getDisplayMedia({ video: { cursor: 'never' }, audio: false });
+    video.srcObject = screenStream;
+    video.style.display = 'block';
+    dot.className = 'status-dot running';
+    text.textContent = 'Screen share live';
+    btn.textContent = 'Stop sharing';
+
+    // If the share ends from the browser's own controls (not our
+    // button), stop monitoring too rather than silently going stale.
+    screenStream.getVideoTracks()[0].addEventListener('ended', () => {
+      screenStream = null;
+      video.style.display = 'none';
+      dot.className = 'status-dot';
+      text.textContent = 'Screen share stopped';
+      btn.textContent = 'Share a screen or window';
+      if(pushInterval) stopMonitoring();
+    });
+  } catch(err){
+    text.textContent = 'Screen share canceled or unavailable: ' + err.message;
+  }
+}
+
+function captureAndPushFrame(){
+  const video = document.getElementById('screenVideo');
+  const canvas = document.getElementById('screenCanvas');
+  if(!screenStream || !video.videoWidth) return;
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+  const image = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+  fetch('/monitor/push-frame', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ image }),
+  }).catch(() => { /* refreshStatus/refreshLog pollers surface connectivity issues */ });
+}
+
+async function startMonitoring(){
+  startError.style.display = 'none';
+  const sourceType = getSourceType();
+  const body = {
+    sourceType,
+    cameraUrl: document.getElementById('cameraUrl').value.trim(),
+    deviceId: document.getElementById('deviceId').value.trim(),
+    label: document.getElementById('cameraLabel').value.trim(),
+    expectedCount: document.getElementById('expectedCount').value,
+    intervalSeconds: document.getElementById('intervalSeconds').value,
+    accessibleGate: document.getElementById('accessibleGate').checked,
+    alertEmail: document.getElementById('alertEmail').value.trim(),
+    alertPhone: document.getElementById('alertPhone').value.trim(),
+  };
+  if(sourceType === 'url' && !body.cameraUrl){
+    startError.textContent = 'Camera URL is required.';
+    startError.style.display = 'block';
+    return;
+  }
+  if(sourceType === 'webcam' && !body.deviceId){
+    startError.textContent = 'Webcam device is required — use "Detect connected cameras" to find it.';
+    startError.style.display = 'block';
+    return;
+  }
+  if(sourceType === 'browser-push' && !screenStream){
+    startError.textContent = 'Share a screen or window first using the button above.';
+    startError.style.display = 'block';
+    return;
+  }
+  try{
+    const res = await fetch('/monitor/start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error || 'Failed to start');
+    setFieldsDisabled(true);
+    startBtn.style.display = 'none';
+    stopBtn.style.display = 'inline-block';
+
+    if(sourceType === 'browser-push'){
+      let secs = parseInt(body.intervalSeconds, 10);
+      if(!secs || secs < 5) secs = 5;
+      captureAndPushFrame(); // send one immediately, same pattern as the server-side ticker
+      pushInterval = setInterval(captureAndPushFrame, secs * 1000);
+    }
+
+    refreshStatus();
+  } catch(err){
+    startError.textContent = err.message;
+    startError.style.display = 'block';
+  }
+}
+
+async function stopMonitoring(){
+  await fetch('/monitor/stop', { method: 'POST' });
+  if(pushInterval){
+    clearInterval(pushInterval);
+    pushInterval = null;
+  }
+  setFieldsDisabled(false);
+  startBtn.disabled = !consentBox.checked;
+  startBtn.style.display = 'inline-block';
+  stopBtn.style.display = 'none';
+  refreshStatus();
+}
+
+function fmtTime(iso){
+  return new Date(iso).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+}
+
+async function refreshStatus(){
+  try{
+    const res = await fetch('/monitor/status');
+    const s = await res.json();
+    const dot = document.getElementById('statusDot');
+    const main = document.getElementById('statusMain');
+    const sub = document.getElementById('statusSub');
+
+    if(s.running){
+      dot.className = 'status-dot running';
+      const src = s.config.sourceType === 'webcam' ? `webcam ${s.config.deviceId}`
+        : s.config.sourceType === 'browser-push' ? 'screen share (this browser tab)'
+        : s.config.cameraUrl;
+      main.textContent = `Running — ${s.config.label ? s.config.label + ' · ' : ''}${src}`;
+      sub.textContent = `${s.captureCount} captures since ${fmtTime(s.startedAt)}${s.lastError ? ' · last error: ' + s.lastError : ''}`;
+      setFieldsDisabled(true);
+      startBtn.style.display = 'none';
+      stopBtn.style.display = 'inline-block';
+    } else {
+      dot.className = 'status-dot';
+      main.textContent = 'Stopped';
+      sub.textContent = '';
+      setFieldsDisabled(false);
+      startBtn.disabled = !consentBox.checked;
+      startBtn.style.display = 'inline-block';
+      stopBtn.style.display = 'none';
+    }
+  } catch(err){
+    document.getElementById('statusMain').textContent = 'Could not reach the server — is it running?';
+  }
+}
+
+async function refreshLog(){
+  try{
+    const res = await fetch('/monitor/log');
+    const log = await res.json();
+    const el = document.getElementById('logList');
+    if(!log.length){
+      el.innerHTML = '<div class="log-empty">Nothing captured yet.</div>';
+      return;
+    }
+    el.innerHTML = log.map(entry => {
+      if(entry.error){
+        return `<div class="log-item"><span class="t">${fmtTime(entry.timestamp)} — capture failed</span><span class="badge bad">${entry.error}</span></div>`;
+      }
+      const kind = entry.tailgate_flag ? 'bad' : (entry.accessible_gate_used ? 'warn' : 'ok');
+      const label = entry.tailgate_flag ? 'Tailgate flagged' : (entry.accessible_gate_used ? 'Accessible gate' : 'Matched');
+      let alertNote = '';
+      if(entry.alertResult){
+        const parts = [];
+        if(entry.alertResult.email) parts.push('email: ' + entry.alertResult.email);
+        if(entry.alertResult.sms) parts.push('sms: ' + entry.alertResult.sms);
+        if(parts.length) alertNote = ` · ${parts.join(', ')}`;
+      }
+      return `<div class="log-item"><span class="t">${fmtTime(entry.timestamp)} · ${entry.people_count} seen, ${entry.queued_count || 0} waiting — ${entry.note}${alertNote}</span><span class="badge ${kind}">${label}</span></div>`;
+    }).join('');
+  } catch(err){ /* server unreachable — status poller already surfaces this */ }
+}
+
+refreshStatus();
+refreshLog();
+loadPlatformNote();
+setInterval(refreshStatus, 4000);
+setInterval(refreshLog, 4000);
+</script>
+
+</body>
+</html>
