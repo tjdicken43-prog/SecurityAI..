@@ -183,53 +183,7 @@ function captureFrame(cfg) {
   });
 }
 
-async function analyzeFrame(base64Image, cfg) {
-  if (!process.env.ANTHROPIC_API_KEY) {
-    throw new Error('ANTHROPIC_API_KEY is not set in .env — required for server-side analysis.');
-  }
-
-  const gateInstruction = cfg.accessibleGate
-    ? `This entrance has a separate marked accessible/disabled-access gate (e.g. a wider gate, ramp, or push-button door) alongside the main scan point. If someone is visibly entering through that accessible gate rather than the main scan point, set accessible_gate_used to true and do NOT set tailgate_flag for that person — accessible gates are frequently not wired to the same scan hardware, so an unmatched entry there is expected, not a violation. Still describe it in the note so staff can confirm the check-in separately.`
-    : `This entrance does not have a separate accessible gate — treat all visible entries as going through the single main scan point.`;
-
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': process.env.ANTHROPIC_API_KEY,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 350,
-      messages: [{
-        role: 'user',
-        content: [
-          { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: base64Image } },
-          { type: 'text', text: `You are an entrance security camera analyzing a gym doorway. The front desk expects ${cfg.expectedCount} check-in(s) at any given moment. ${gateInstruction}
-
-Distinguish between people actually crossing the threshold now versus people simply standing nearby waiting their turn to scan — someone waiting in line is not the same as someone entering unscanned, and should not by itself cause a flag.
-
-Respond ONLY with strict JSON, no markdown fences, no other text:
-{"people_count": <int, people actually crossing/entering right now>, "queued_count": <int, people visibly waiting nearby but not yet crossing>, "accessible_gate_used": <true|false>, "tailgate_flag": <true|false>, "note": "<one short plain-language sentence describing what you see>"}
-
-Set tailgate_flag true only if people_count (excluding anyone using the accessible gate) is greater than ${cfg.expectedCount}. Never flag based on queued_count alone.` },
-        ],
-      }],
-    }),
-  });
-
-  if (!response.ok) {
-    const body = await response.text().catch(() => '');
-    throw new Error(`Anthropic API error ${response.status}: ${body.slice(0, 200)}`);
-  }
-
-  const data = await response.json();
-  const textBlock = (data.content || []).find(b => b.type === 'text');
-  const raw = textBlock ? textBlock.text.trim() : '{}';
-  return JSON.parse(raw.replace(/```json|```/g, '').trim());
-}
-
+const vision = require('./vision');
 const mailer = require('./mailer');
 
 let twilioClient = null;
@@ -295,7 +249,7 @@ async function processFrame(base64) {
   const cfg = state.config;
   const ts = new Date().toISOString();
   try {
-    const result = await analyzeFrame(base64, cfg);
+    const result = await vision.analyzeEntry(base64, cfg);
     state.captureCount += 1;
     state.lastError = null;
 

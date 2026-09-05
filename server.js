@@ -25,6 +25,7 @@ const cors = require('cors');
 const Stripe = require('stripe');
 const monitor = require('./monitor');
 const mailer = require('./mailer');
+const vision = require('./vision');
 
 // Stripe is only initialized if a key is present. This matters because
 // someone might run this server purely for the monitoring feature and
@@ -115,6 +116,40 @@ app.post('/monitor/push-frame', async (req, res) => {
     res.json({ ok: true, status: monitor.getStatus() });
   } catch (err) {
     res.status(400).json({ error: err.message });
+  }
+});
+
+// Called by securityai.html's "Capture & analyze" button. This used to
+// call api.anthropic.com directly from the browser, which only worked
+// while the page was rendered inside Claude's own interface (which
+// proxies that call). On an independent domain there's no such proxy,
+// so this route exists to do the same call server-side, where a real
+// ANTHROPIC_API_KEY actually lives.
+app.post('/analyze-frame', async (req, res) => {
+  try {
+    const { image, expectedCount, accessibleGate } = req.body;
+    if (!image) return res.status(400).json({ error: 'image (base64 JPEG) is required.' });
+    const result = await vision.analyzeEntry(image, {
+      expectedCount: parseInt(expectedCount, 10) || 1,
+      accessibleGate: !!accessibleGate,
+    });
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Called by securityai.html's "Scan visible cameras" button — same
+// reasoning as /analyze-frame above, just for the multi-camera-scan
+// preview feature instead of single-entrance detection.
+app.post('/scan-cameras', async (req, res) => {
+  try {
+    const { image, zones } = req.body;
+    if (!image) return res.status(400).json({ error: 'image (base64 JPEG) is required.' });
+    const result = await vision.scanCameraWall(image, Array.isArray(zones) ? zones : []);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 

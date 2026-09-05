@@ -8,6 +8,8 @@ Fully working as downloaded, in a browser, with no setup. Click "Enable camera" 
 
 **This runs in your browser tab.** Close the tab, let your laptop sleep, or lose focus for long enough, and it stops. That's fine for trying the concept, but it is not what you want for actually running unattended — that's what #3 below is for.
 
+**Important — this needs `ANTHROPIC_API_KEY` set once deployed anywhere outside Claude's own interface.** The browser demo calls `/analyze-frame` and `/scan-cameras` on this server (see `vision.js`), not Anthropic directly — it used to call `api.anthropic.com` straight from the browser, which only worked while this page was being built and previewed inside Claude's own interface (which proxies that exact call). On any real, independently-hosted domain, that proxy doesn't exist, the browser has no API key, and the request fails before it gets a response — showing up as "Failed to fetch." Routing through this server fixes that, but it means the demo genuinely does not work on a live deployment until `ANTHROPIC_API_KEY` is set in that deployment's environment variables, same as the persistent monitor needs in #3.
+
 ### Testing on a phone during development
 
 Camera and screen-share APIs only work over a "secure context" — `https://`, or `http://localhost` on the same machine. A phone can't use "localhost" to mean your computer, so `http://192.168.x.x:4242` from your phone still counts as insecure and both buttons will fail, even though the same page works fine on the computer running the server. This is a browser platform rule, not a bug in this code.
