@@ -20,6 +20,7 @@
 
 require('dotenv').config();
 const express = require('express');
+const path = require('path');
 const cors = require('cors');
 const Stripe = require('stripe');
 const monitor = require('./monitor');
@@ -52,6 +53,14 @@ app.use((req, res, next) => {
   express.json({ limit: '10mb' })(req, res, next);
 });
 app.use(express.static(__dirname)); // serves securityai.html / checkout.html / monitor.html directly
+
+// Without this, visiting the bare domain (just "/") 404s with "Cannot GET /",
+// because the homepage is named securityai.html, not index.html — the one
+// filename express.static automatically serves at "/". This makes the
+// root URL work the way a visitor actually expects.
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'securityai.html'));
+});
 
 // --- Persistent monitoring controls (see monitor.js for the actual loop) ---
 // These are the endpoints monitor.html's Start/Stop buttons call. Once
@@ -214,4 +223,10 @@ app.post('/webhook', express.raw({ type: 'application/json' }), (req, res) => {
   res.json({ received: true });
 });
 
-app.listen(4242, () => console.log('SecurityAI payment server running on http://localhost:4242'));
+// Render (and most hosting platforms) assign the port dynamically via
+// the PORT environment variable and expect the app to listen on
+// whatever that is — a hardcoded port means the platform never sees
+// anything answering and reports the deploy as failed. Falls back to
+// 4242 for local development, where PORT usually isn't set.
+const PORT = process.env.PORT || 4242;
+app.listen(PORT, () => console.log(`SecurityAI payment server running on port ${PORT}`));
